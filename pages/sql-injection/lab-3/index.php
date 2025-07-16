@@ -9,16 +9,22 @@ $error_message = '';
 if (isset($_GET['id'])) {
     $id = $_GET['id'];
     
-    // VULNERABLE CODE - URL Parameter SQL Injection
-    $query = "SELECT * FROM user_profiles WHERE id = $id";
-    
-    try {
-        $result = $pdo->query($query);
-        if ($result) {
-            $user_data = $result->fetch(PDO::FETCH_ASSOC);
+    if(strlen((int)$id) != strlen($id)){
+        $error_message = 'ID tidak ditemukan';
+    }
+    if($error_message == ''){
+        // VULNERABLE CODE - URL Parameter SQL Injection
+        $query = "SELECT * FROM user_profiles WHERE id = :id";
+        
+        try {
+            $result = $pdo->prepare($query);
+            $result->bindParam('id', $id);
+            if ($result->execute()) {
+                $user_data = $result->fetch(PDO::FETCH_ASSOC);
+            }
+        } catch (PDOException $e) {
+            $error_message = "Database error: " . $e->getMessage();
         }
-    } catch (PDOException $e) {
-        $error_message = "Database error: " . $e->getMessage();
     }
 }
 ?>

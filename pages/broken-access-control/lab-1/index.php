@@ -6,17 +6,27 @@ require_once '../../../template/header.php';
 $message = '';
 $user_role = $_SESSION['user_role'] ?? 'user';
 $is_login = false;
+$is_admin = false;
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'user'; // VULNERABLE - Role can be manipulated
+    // $role = $_POST['role'] ?? 'user'; // VULNERABLE - Role can be manipulated
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error_message = "Invalid email format";
+    }
    
-    $query = "SELECT * FROM users WHERE email = '$email' AND password = '" . sha1($password) . "'";
+    $query = "SELECT * FROM users WHERE email = :email AND password = :password";
     try {
-        $result = $pdo->query($query);
+        $result = $pdo->prepare($query);
+        $result->bindParam('email', $email);
+        $result->bindParam('password', sha1($password));
+        $result->execute();
         if ($result && $result->rowCount() > 0) {
             $user = $result->fetch(PDO::FETCH_ASSOC);
-             $_SESSION['user_role'] = $role;
+             $_SESSION['user_role'] = $user['role'];
+             if(strtoupper($user['role']) == 'ADMIN'){
+                $is_admin = true;
+             }
              $is_login = true;
         } else {
             $message = "Invalid credentials";
@@ -24,7 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } catch (PDOException $e) {
         $error_message = "Database error: " . $e->getMessage();
     }
-    
 }
 ?>
 
@@ -81,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <input type="password" class="form-control" id="password" name="password" required>
                                     </div>
                                     
-                                    <input type="hidden" name="role" value="user">
+                                    <!-- <input type="hidden" name="role" value="user"> -->
                                     
                                     <button type="submit" class="btn btn-primary">Login</button>
                                 </form>

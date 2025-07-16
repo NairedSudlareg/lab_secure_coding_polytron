@@ -8,13 +8,16 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $domain = $_POST['domain'] ?? '';
-    
-    if ($domain) {
-        // VULNERABLE CODE - Command injection vulnerability
-        $output =  system("nslookup $domain");
-        if ($output == null): 
-            $output = "No output returned. Please check the domain.";
-        endif;
+    if (!filter_var($domain, FILTER_VALIDATE_URL)) {
+        $output = 'Invalid URL';
+    }else{
+        if ($domain) {
+            // VULNERABLE CODE - Command injection vulnerability
+            $output =  system("nslookup $domain");
+            if ($output == null): 
+                $output = "No output returned. Please check the domain.";
+            endif;
+        }
     }
 }
 ?>

@@ -3,7 +3,7 @@ $page_title = "XSS Lab 2 - Reflected XSS";
 require_once '../../../config/env.php';
 require_once '../../../template/header.php';
 
-$search_term = $_GET['search'] ?? '';
+$search_term = preg_replace('/[^a-zA-Z0-9\']/', '',$_GET['search']) ?? '';
 $error_message = $_GET['error'] ?? '';
 ?>
 
@@ -47,14 +47,14 @@ $error_message = $_GET['error'] ?? '';
                                 
                                 <form method="get">
                                     <div class="input-group mb-3">
-                                        <input type="text" class="form-control" name="search" placeholder="Search for users..." value="<?php echo htmlspecialchars($search_term); ?>">
+                                        <input type="text" class="form-control" name="search" placeholder="Search for users..." value="<?php echo htmlspecialchars(preg_replace('/[^a-zA-Z0-9\']/', '',$search_term)); ?>">
                                         <button class="btn btn-primary" type="submit">Search</button>
                                     </div>
                                 </form>
                                 
-                                <?php if ($search_term): ?>
+                                <?php if (preg_replace('/[^a-zA-Z0-9\']/', '',$search_term)): ?>
                                     <div class="alert alert-info" role="alert">
-                                        <h5>Search Results for: <?php echo $search_term; ?></h5>
+                                        <h5>Search Results for: <?php echo preg_replace('/[^a-zA-Z0-9\']/', '',$search_term); ?></h5>
                                         <p>No users found matching your search criteria.</p>
                                     </div>
                                 <?php endif; ?>

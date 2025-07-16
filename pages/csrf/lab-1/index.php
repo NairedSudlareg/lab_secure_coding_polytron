@@ -2,29 +2,56 @@
 $page_title = "CSRF Lab 1 - Login Form CSRF";
 require_once '../../../config/env.php';
 require_once '../../../template/header.php';
+function uuidv4()
+{
+  $data = random_bytes(16);
+
+  $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // set version to 0100
+  $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // set bits 6-7 to 10
+    
+  return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+$csrf = uuidv4();
+$dateNow = strtotime(date('Y-m-d H:i:s'));
+$_SESSION['session_'.$dateNow] = $csrf;
 
 $message = '';
 $is_login = false;
 
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = $_POST['email'] ?? '';
+    $email = $_POST['email'][0] ?? '';
     $password = $_POST['password'] ?? '';
-   
-    // VULNERABLE CODE - Do not use in production!
-    $query = "SELECT * FROM users WHERE email = '$email' AND password = '" . sha1($password) . "'";
-    
-    try {
-        $result = $pdo->query($query);
-        if ($result && $result->rowCount() > 0) {
-            $user = $result->fetch(PDO::FETCH_ASSOC);
-            $message = "Login successful! Welcome, " . $user['email'];
-            $is_login = true;
-        } else {
-            $message = "Invalid email or password.";
+    $csrfToken = $_POST['csrf'] ?? '';
+    if(count(explode(';', $csrfToken))!=2){
+        $message = 'Token missmatch '.$csrf.' '.$csrfToken;
+    }else{
+        if($_SESSION['session_'.explode(';', $csrfToken)[1]] != explode(';', $csrfToken)[0]){
+            // var_dump($csrf, $csrfToken);
+            $message = 'Token missmatch '.$csrf.' '.$csrfToken;
         }
-    } catch (PDOException $e) {
-        $message = "Database error: " . $e->getMessage();
     }
+    if($message == ''){
+        // VULNERABLE CODE - Do not use in production!
+        $query = "SELECT * FROM users WHERE email = :email AND password = :password";
+        
+        try {
+            $result = $pdo->prepare($query);
+            $result->bindParam('email', $email);
+            $result->bindParam('password', sha1($password));
+            $result->execute();
+            if ($result && $result->rowCount() > 0) {
+                $user = $result->fetch(PDO::FETCH_ASSOC);
+                $message = "Login successful! Welcome, " . $user['email'];
+                $is_login = true;
+            } else {
+                $message = "Invalid email or password.";
+            }
+        } catch (PDOException $e) {
+            $message = "Database error: " . $e->getMessage();
+        }
+    }
+   
 }
 ?>
 
@@ -71,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     <div class="mb-3">
                                         <label for="email" class="form-label">Email:</label>
                                         <input type="text" class="form-control" id="email" name="email" required>
+                                        <input type="text" class="form-control" id="csrf" name="csrf" value="<?php echo $csrf.';'.$dateNow ?>" hidden readonly>
                                     </div>
                                     
                                     <div class="mb-3">

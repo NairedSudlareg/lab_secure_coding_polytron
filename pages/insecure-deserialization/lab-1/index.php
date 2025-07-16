@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($user_data) {
         try {
             // VULNERABLE - Unsafe deserialization
-            $user = unserialize($user_data);
+            $user = json_decode($user_data);
             if ($user instanceof User) {
                 $message = "User object deserialized: " . htmlspecialchars($user->username) . " (Role: " . htmlspecialchars($user->role) . ")";
                 if ($user->role == 'admin') {

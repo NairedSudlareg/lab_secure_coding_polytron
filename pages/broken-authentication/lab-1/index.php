@@ -6,29 +6,46 @@ require_once '../../../template/header.php';
 $message = '';
 $attempts = $_SESSION['login_attempts'] ?? 0;
 $alert_class = "alert-danger";
+$error_message = '';
 $is_login = false;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $email = $_POST['email'] ?? '';
-    $password = $_POST['password'] ?? '';
-    
-    $_SESSION['login_attempts'] = $attempts + 1;
-
-    $query = "SELECT * FROM users WHERE email = '$email' AND password = '" . sha1($password) . "'";
-
-    try {
-        $result = $pdo->query($query);
-        if ($result && $result->rowCount() > 0) {
-            $user = $result->fetch(PDO::FETCH_ASSOC);
-            $message = "Login successful! Weak password detected: " . htmlspecialchars($password);
-            $alert_class = "alert-info";
-            $is_login = true;
-        } else {
-            $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
-            $message = "Invalid credentials. Attempt #" . $_SESSION['login_attempts'];
+    if($_SESSION['login_attempts'] > 5){
+        $error_message = "Akun anda terblokir, sudah lebih dari 5 percobaan password";
+        $alert_class = "alert-danger";
+    }
+    if($error_message == ''){
+        $email = $_POST['email'] ?? '';
+        $password = $_POST['password'] ?? '';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error_message = "Invalid email format";
         }
-    } catch (PDOException $e) {
-        $error_message = "Database error: " . $e->getMessage();
+        if($error_message == ''){
+            $_SESSION['login_attempts'] = $attempts + 1;
+        
+            $query = "SELECT * FROM users WHERE email = :email AND password = :password";
+        
+            try {
+                $result = $pdo->prepare($query);
+                $result->bindParam('email', $email);
+                $result->bindParam('password', sha1($password));
+                $result->execute();
+                if ($result && $result->rowCount() > 0) {
+                    // print_r($result);
+                    // $user = $result->fetch(PDO::FETCH_ASSOC);
+                    $message = "Login successful! Weak password detected: " . htmlspecialchars($password);
+                    $alert_class = "alert-info";
+                    $is_login = true;
+                    $_SESSION['login_attempts'] = 0;
+                } else {
+                    $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
+                    $message = "Invalid credentials. Attempt #" . $_SESSION['login_attempts'];
+                }
+            } catch (PDOException $e) {
+                $error_message = "Database error: " . $e->getMessage();
+                $alert_class = "alert-danger";
+            }
+        }
     }
 }
 ?>
@@ -68,6 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 <?php if ($message): ?>
                                     <div class="alert <?php echo $alert_class;?>" role="alert">
                                         <?php echo $message; ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($error_message): ?>
+                                    <div class="alert <?php echo $alert_class;?>" role="alert">
+                                        <?php echo $error_message; ?>
                                     </div>
                                 <?php endif; ?>
                                 <?php if(!$is_login): ?>

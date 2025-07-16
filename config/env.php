@@ -18,7 +18,7 @@ define('DB_PASS', 'root');
 #define('DB_PASS', 'root');
 
 // Base URL Configuration
-define('BASE_URL', 'http://localhost:8000');
+define('BASE_URL', 'http://localhost:8001');
 
 define('SITE_NAME', 'Cybersecurity Learning Platform - Polytron');
 

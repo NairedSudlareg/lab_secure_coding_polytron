@@ -12,25 +12,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $password = $_POST['password'] ?? '';
     
     $start_time = microtime(true);
-    
-    // VULNERABLE CODE - Blind SQL Injection
-    $query = "SELECT * FROM users WHERE email = '$email' AND password = 'sha1($password)'";
-    
-    try {
-        $result = $pdo->query($query);
-        $end_time = microtime(true);
-        $login_time = number_format(($end_time - $start_time) * 1000, 2);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = "Invalid email format";
+    }
+    if($message == ''){
+        // VULNERABLE CODE - Blind SQL Injection
+        $query = "SELECT * FROM users WHERE email = :email AND password = :password";
         
-        if ($result && $result->rowCount() > 0) {
-            $message = "Login successful!";
-            $is_login = true; 
-        } else {
-            $message = "Invalid credentials.";
+        try {
+            $result = $pdo->prepare($query);
+            $result->bindParam('email', $email);
+            $result->bindParam('password', sha1($password));
+            $end_time = microtime(true);
+            $login_time = number_format(($end_time - $start_time) * 1000, 2);
+            
+            if ($result && $result->rowCount() > 0) {
+                $message = "Login successful!";
+                $is_login = true; 
+            } else {
+                $message = "Invalid credentials.";
+            }
+        } catch (PDOException $e) {
+            $end_time = microtime(true);
+            $login_time = number_format(($end_time - $start_time) * 1000, 2);
+            $message = "Login failed.";
         }
-    } catch (PDOException $e) {
-        $end_time = microtime(true);
-        $login_time = number_format(($end_time - $start_time) * 1000, 2);
-        $message = "Login failed.";
     }
 }
 ?>

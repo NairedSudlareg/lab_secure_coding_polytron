@@ -5,11 +5,13 @@ require_once '../../../template/header.php';
 
 $message = '';
 $profiles = [];
-$userID = 2;
+$userID = 0;
 
 // Fetch existing profiles
 try {
-    $result = $pdo->query("SELECT * FROM user_profiles where user_id = $userID");
+    $result = $pdo->query("SELECT * FROM user_profiles where user_id = :id");
+    $result->bindParam('id', $userID);
+    $result->execute();
     $profiles = $result->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     // Table might not exist, create it
@@ -24,18 +26,78 @@ try {
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = $_POST['name'] ?? '';
     $bio = $_POST['bio'] ?? '';
-    
-    // VULNERABLE CODE - No XSS protection
-    $query = "UPDATE user_profiles SET name = ?, bio = ? where user_id = $userID";
-    $stmt = $pdo->prepare($query);
-    
-    if ($stmt->execute([$name, $bio])) {
-        $message = "Profile updated successfully!";
-        // Refresh profiles
-        $result = $pdo->query("SELECT * FROM user_profiles where user_id = $userID");
-        $profiles = $result->fetchAll(PDO::FETCH_ASSOC);
-    } else {
-        $message = "Error updating profile.";
+    if (!preg_match("/^[a-zA-Z-' ]*$/",$name)) {
+        $message = "Invalid input name";
+    }
+    if($message == ''){
+        if(preg_match('/[#$%^&*+\[\]\';\/{}|<>?~\\\\]/', $bio)){
+            $message = "Invalid input bio, only alphabet and numeric input";
+        }
+    }
+    if($message == ''){
+        $dataExist = 0;
+        $query = "SELECT user_id FROM user_profiles WHERE name = :name";
+        $stmt = $pdo->prepare($query);
+        $stmt->bindParam('name', $name);
+        $stmt->execute();
+        if ($stmt && $stmt->rowCount() > 0) {
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $userID = $user['user_id'];
+            $dataExist = 1;
+        }
+        if($userID == 0){
+            $query = "SELECT MAX(user_id) as user_id FROM user_profiles";
+            $stmt = $pdo->prepare($query);
+            $stmt->execute();
+            if ($stmt && $stmt->rowCount() > 0) {
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                $userID = $user['user_id'];
+            }
+        }
+        $id = 0;
+        $query = "SELECT MAX(id) as id FROM user_profiles";
+        $stmt = $pdo->prepare($query);
+        $stmt->execute();
+        if ($stmt && $stmt->rowCount() > 0) {
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+            $id = $user['id'];
+        }
+        if(!$dataExist){
+            $userID+=1;
+            $id+=1;
+            // VULNERABLE CODE - No XSS protection
+            $query = "INSERT INTO user_profiles (id, user_id, name, bio, nik) VALUES (:id,:user_id,:name,:bio,:nik)";
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam('id', $id);
+            $stmt->bindParam('user_id', $userID);
+            $stmt->bindParam('name', $name);
+            $stmt->bindParam('bio', $bio);
+            $stmt->bindParam('nik', rand(10009,99999));
+            if ($stmt->execute()) {
+                $message = "Profile create successfully!";
+                // Refresh profiles
+                $result = $pdo->query("SELECT * FROM user_profiles where user_id = $userID");
+                $profiles = $result->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $message = "Error inserting profile.";
+            }
+        }else{
+            // VULNERABLE CODE - No XSS protection
+            $query = "UPDATE user_profiles SET name = :name, bio = :bio where user_id = :id";
+            $stmt = $pdo->prepare($query);
+            $stmt->bindParam('id', $userID);
+            $stmt->bindParam('name', $name);
+            $stmt->bindParam('bio', $bio);
+            
+            if ($stmt->execute()) {
+                $message = "Profile updated successfully!";
+                // Refresh profiles
+                $result = $pdo->query("SELECT * FROM user_profiles where user_id = $userID");
+                $profiles = $result->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                $message = "Error updating profile.";
+            }
+        }
     }
 }
 ?>

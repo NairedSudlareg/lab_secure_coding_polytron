@@ -13,7 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     if ($email === 'admin@example.com' && $password === 'admin') {
         // VULNERABLE - Unvalidated redirect
-        if ($redirect) {
+        $countURL = strlen(BASE_URL);
+        if (substr($redirect, $countURL) == BASE_URL) {
             header("Location: " . $redirect);
             exit();
         } else {

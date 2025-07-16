@@ -9,24 +9,29 @@ $is_login = false;
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
-   
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error_message = "Invalid email format";
+    }
     // VULNERABLE CODE - Do not use in production!
-    $query = "SELECT * FROM users WHERE email = '$email' AND password = '" . sha1($password) . "'";
-    
-    try {
-        $result = $pdo->query($query);
-        if ($result && $result->rowCount() > 0) {
-            $user = $result->fetch(PDO::FETCH_ASSOC);
-            $success_message = "Login successful! Welcome, " . $user['email'];
-            if ($user['role'] === 'admin') {
-                $success_message .= " (Admin Access Granted)";
-                $is_login = true;
+    $query = "SELECT * FROM users WHERE email = :email AND password = :password";
+    if($error_message == ''){
+        try {
+            $result = $pdo->prepare($query);
+            $result->bindParam('email', $email);
+            $result->bindParam('password', sha1($password));
+            if ($result && $result->rowCount() > 0) {
+                $user = $result->fetch(PDO::FETCH_ASSOC);
+                $success_message = "Login successful! Welcome, " . $user['email'];
+                if ($user['role'] === 'admin') {
+                    $success_message .= " (Admin Access Granted)";
+                    $is_login = true;
+                }
+            } else {
+                $error_message = "Invalid email or password.";
             }
-        } else {
-            $error_message = "Invalid email or password.";
+        } catch (PDOException $e) {
+            $error_message = "Database error: " . $e->getMessage();
         }
-    } catch (PDOException $e) {
-        $error_message = "Database error: " . $e->getMessage();
     }
 }
 ?>

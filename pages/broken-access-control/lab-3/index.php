@@ -12,7 +12,7 @@ try {
             $balance = $result->fetch(PDO::FETCH_ASSOC);
 
             if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-                $amount = $_POST['balance'] - $_POST['amount'];
+                $amount = $balance['balance'] - $_POST['amount'];
                 if($amount < 1){
                     $message = "Balance is not enough";
                 } else {
@@ -46,7 +46,7 @@ try {
                         </nav>
                         
                         <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h1 class="h2">Lab 1: Amount Manipulation</h1>
+                            <h1 class="h2">Lab 3: Amount Manipulation</h1>
                             <span class="lab-difficulty difficulty-easy">Easy</span>
                         </div>
                     </div>

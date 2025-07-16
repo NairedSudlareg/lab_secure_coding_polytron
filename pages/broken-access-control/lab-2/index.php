@@ -3,9 +3,31 @@ $page_title = "Broken Access Control Lab 2 - Horizontal Privilege Escalation";
 require_once '../../../config/env.php';
 require_once '../../../template/header.php';
 
-if (isset($_GET['user_id'])) {
-    $user_id = $_GET['user_id'];
+define("ENCRYPT_METHOD", "AES-256-CBC");
+define("SECRET_KEY","thisismysecretkey");
+define("SECRET_IV", "secretiv");
+function encriptar($action, $string)
+{
+  $output = false;
+  $key    = hash("sha256", SECRET_KEY);
+  $iv     = substr(hash("sha256", SECRET_IV), 0, 16);
 
+  if ($action == "encrypt")
+  {
+    $output = openssl_encrypt($string, ENCRYPT_METHOD, $key, 0, $iv);
+    $output = base64_encode($output);
+  }
+  else if($action == "decrypt")
+    {
+        $output = base64_decode($string);
+        $output = openssl_decrypt($output, ENCRYPT_METHOD, $key, 0, $iv);
+    }
+  return $output;
+}
+
+$user_id = null;
+if (isset($_GET['user_id'])) {
+    $user_id = encriptar('decrypt', $_GET['user_id']);
 }
 
 $current_user = $user_id ?? null;
@@ -43,8 +65,10 @@ $current_user = $user_id ?? null;
                                 <h5 class="mb-0">User Profile Viewer</h5>
                             </div>
                             <div class="card-body">
-                                <p>You are currently viewing identity for User ID: <?php echo htmlspecialchars($user_id); ?></p>
-                                
+                                <p>You are currently viewing identity for User ID: <?php echo htmlspecialchars($user_id??0); ?></p>
+                                <!-- eTZpZ1BrWkNGQlVOdzY4WG4rQm4yUT09 id 1 -->
+                                <!-- OEo2OExMQ3dmUHdHOS9CTGNINHNPQT09 id 3 -->
+                                <!-- R0djSXpPYXA4cmw3QlJHOFhVMStrUT09 id 5 -->
                                 <?php if ($current_user): ?>
                                     <div class="alert alert-info" role="alert">
                                         <h5>KTP:</h5>
@@ -61,6 +85,9 @@ $current_user = $user_id ?? null;
                                     <a href="?user_id=1" class="btn btn-outline-primary me-2">KTP User 1</a>
                                     <a href="?user_id=3" class="btn btn-outline-primary me-2">KTP User 2</a>
                                     <a href="?user_id=5" class="btn btn-outline-primary">KTP User 3</a>
+                                    <a href="?user_id=eTZpZ1BrWkNGQlVOdzY4WG4rQm4yUT09" class="btn btn-outline-primary me-2">KTP User 1 Encrypt</a>
+                                    <a href="?user_id=OEo2OExMQ3dmUHdHOS9CTGNINHNPQT09" class="btn btn-outline-primary me-2">KTP User 2 Encrypt</a>
+                                    <a href="?user_id=R0djSXpPYXA4cmw3QlJHOFhVMStrUT09" class="btn btn-outline-primary">KTP User 3 Encrypt</a>
                                 </div>
                             </div>
                         </div>
